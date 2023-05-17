@@ -14,11 +14,17 @@ public class UI {
     }
 
     public void run(){
-        initialize();
-        System.out.println("[RUNNING]");
+        //load player data
+        System.out.println("[INITIALIZING]");
+        if(player.getGamesPlayed() < 1) {
+            resetPlayer(true);
+            loadPlayer();//if player has played before, load playerdata; else player remains null, so a new player is created below
+        }
+        delay(2);
         do{
-            System.out.println("ENTER YOUR NAME:");
-            player.setName(input.nextLine());
+            if(player.getName()==null){
+                newPlayer();
+            }else{break;}
         }while(player.getName()==null);
         System.out.println("Welcome, " + player.getName() + "!");
         delay(1);
@@ -28,10 +34,45 @@ public class UI {
         }
     }
 
+    private void mainMenu(){
+        System.out.println("[MAIN MENU]");
+        int selection;
+        do{
+            System.out.println("1 - Start\n2 - View Player Info\n3 - Clear Player Data");
+            selection = input.nextInt();
+            input.nextLine();
+            System.out.println();
+            if(selection==1){
+                break;
+            } else if (selection==2) {
+                System.out.println(player.playerInfo());
+                pressEnter();
+            } else if (selection==3) {
+                do{
+                    System.out.println("Are you sure?\n" +
+                            "1 - yes (clears data)\n" +
+                            "2 - no (return)\n" +
+                            "Note: If you'd like to keep your data, simply go to your directory and copy [playerdata.ser] to a different location or rename it before clearing your data.");
+                    selection = input.nextInt();
+                    input.nextLine();
+                    if(selection==1){
+                        resetPlayer(false);
+                        break;
+                    } else if (selection==2) {
+                        break;
+                    }
+                }while (true);
+            }
+        }while (true);
+
+
+    }
+
     private void play() {
         int impatient=0;
         String guess="";
         String answer = game.getCurrentWord();
+        System.out.println("If you get stuck at any point, type \"help\" to get a better understanding of the game.");
         do{
             System.out.println("----------");
             gameInfo();
@@ -39,32 +80,62 @@ public class UI {
                 System.out.println("[Game Over]");
                 game.lose();
                 player.lose();
+                gameOver();
                 delay(2);
                 break;
             }
-            System.out.println(game.getPrompt());
-            System.out.println("Guess a word (5 letters):");
-            guess = input.nextLine().toLowerCase();
 
-            if(guess.equals("cheat")){
+            do {
+
+                System.out.println(game.getPrompt());
+                System.out.println("Guess a word (5 letters) or type \"help\" for help:");
+                guess = input.nextLine().toLowerCase();
+                if(!game.isValidAnswer(guess)){
+                    System.out.println("Try Again");
+                    delay(1);
+                }
+            }while (!game.isValidAnswer(guess));
+
+            if(guess.equals("cheats")){
                 System.out.println(game.getCurrentWord());
+                guess = "loser";
+                game.setPlayerLastGuess(guess);
             }
+
+            System.out.println("\nYou guessed " + guess);
 
             if(guess.equals(answer)){
                 game.correctGuess();
                 player.win();
+                gameOver();
                 delay(2);
                 break;
             }
-            else if (guess.length() != 5){
+            else if(guess.equals("help")){
+                System.out.println("\n....................");
+                game.displayWrongLetters();
+                System.out.println("[PROMPT]:\n" + game.getPrompt() + "\n----------");
+                System.out.println("[CONTAINS THESE LETTERS]:\n" + game.getContainsThese() + "\n----------");
+                System.out.println("The letters at the top are letters you entered but do not appear in the answer\n" +
+                        "\tIf a letter appears in the prompt, then you entered it in the correct location\n" +
+                        "\tThe letters under \"CONTAINS THESE LETTERS\" are letters that appear in the word, but you may have in the wrong place.\n" +
+                        "\t*- indicates that letter is in the word, but you entered it in the wrong spot");
+                System.out.println("\n....................");
+                pressEnter();
+            }
+            else if (guess.length() != 5 && !guess.equals("help")){
                 System.out.println("Please enter a word that is 5 letters long.");
+                delay(2);
                 impatient++;
-            } else{
+            }
+            else{
                 game.wrongGuess(guess);
+                game.setPlayerLastGuess(guess);
                 if(!game.outOfAttempts()){
                     delay(2);
                 }
             }
+
             if(impatient == 2){
                 System.out.println("FIVE (5) LETTERS");
                 delay(1);
@@ -73,74 +144,52 @@ public class UI {
                 delay(2);
             } else if (impatient > 3) {
                 System.out.println("You don't deserve to use this program and now I'm just gonna waste your time");
-                delay(5);
-                System.out.println("If you actually need help, I'm sorry. Try reading the readme.");
+                delay(impatient);
+                System.out.println("If you actually need help, I'm sorry. Try reading the readme or typing help.");
                 exit();
             }
             System.out.println("----------");
         }while (true);
     }
 
+    private void newPlayer() {
+        System.out.println("[CREATING NEW PLAYER]");
+        System.out.println("ENTER YOUR NAME:");
+        player.setName(input.nextLine());
+        GameSaveManager.savePlayer(player);
+        System.out.println();
+    }
+
+    private void resetPlayer(boolean workaround) {//workaround is temporary until I think of a better solution
+        /*
+        workaround:
+        true - [WORKAROUND] bypasses saving the player. This is used to reset a player that has created a Player object but hasn't played a game.
+        false - [DEFAULT BEHAVIOUR] save the player (for resetting and overwriting the old player when resetting)
+         This is mainly a QOL feature because the console displays what's going on in the background
+         */
+        player.setWins(0);
+        player.setGamesPlayed(0);
+        player.setName(null);
+        if(!workaround){
+            GameSaveManager.savePlayer(player);
+            newPlayer();
+        }
+
+    }
+
+    private void gameOver() {
+        GameSaveManager.savePlayer(player);
+    }
+
     private void gameInfo() {
         System.out.println("Guesses Remaining: " + game.getRemainingAttempts());
     }
 
-    private void initialize(){
-        System.out.println("[INITIALIZING]");
-        int selection;
-        do{
-            System.out.println("1 - New Player\n2 - Load Player Data\n3 - Quit");
-            selection = input.nextInt();
-            input.nextLine();
-            if(selection==1){break;} else if (selection==2) {
-                loadPlayer();
-                break;
-            } else if (selection==3) {
-                exit();
-            }
-        }while (selection < 1 || selection > 3);
-    }
-
-
-
-    private void mainMenu(){
-        System.out.println("[MAIN MENU]");
-        int selection;
-        do{
-            System.out.println("1 - Start\n2 - View Player Info\n3 - Save Player Data");
-            selection = input.nextInt();
-            input.nextLine();
-            if(selection==1){
-                break;
-            } else if (selection==2) {
-                System.out.println(player.playerInfo());
-                pressEnter();
-            } else if (selection==3) {
-                GameSaveManager.savePlayer(player);
-            }
-        }while (true);
-
-
-    }
-
     private void loadPlayer() {
-        String filename;
-        do{
-            System.out.println("Notes:\n" +
-                    "Do NOT include \".ser\"\n" +
-                    "The file name is CASE-SENSITIVE\n" +
-                    "Type \"nvm\" to cancel\n" +
-                    "Enter the name of the file you would like to load:");
-            filename = input.nextLine();
-            if(filename.equals("nvm")){
-                return;
-            }
-            if(GameSaveManager.isValidFileName(filename)) {
-                player = GameSaveManager.loadPlayer(filename);
-                break;
-            }
-        }while (!GameSaveManager.isValidFileName(filename));
-
+        Player loadedPlayer = GameSaveManager.loadPlayer();
+        if(loadedPlayer != null){
+            player = loadedPlayer;
+        }
     }
 
     public void pressEnter() {

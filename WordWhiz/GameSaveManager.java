@@ -6,35 +6,39 @@ public class GameSaveManager {
 
 
     public static void savePlayer(Player player){
-        Scanner gameSaver = new Scanner(System.in);
-        String filename;
-        do {
-            System.out.println("Please enter a name to save your file ('nvm' to cancel):");
-            filename=gameSaver.nextLine();
-            if (filename.equals("nvm")) {
-                return;
-            }
-
-        }while (!isValidFileName(filename));
-        try (FileOutputStream fileOut = new FileOutputStream(filename + ".ser");
+        String filename = "playerdata.ser";
+        try (FileOutputStream fileOut = new FileOutputStream(filename);
             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut)){
             objectOut.writeObject(player);
-            System.out.println("[Game saved successfully]");
+            System.out.println("[Player Data Saved Successfully]");
         }catch (IOException e){
-            System.out.println("Error saving game: " + e.getMessage());
+            System.out.println("[Error saving game]:\n[" + e.getMessage() +"]");
         }
     }
 
-    public static Player loadPlayer(String filename){
+    public static Player loadPlayer(){
         Player player = null;
-        try (FileInputStream fileIn = new FileInputStream(filename + ".ser");
+        try (FileInputStream fileIn = new FileInputStream("playerdata.ser");
              ObjectInputStream objectIn = new ObjectInputStream(fileIn)){
             player = (Player) objectIn.readObject();
-            System.out.println("[Game loaded successfully]");
+            if(player.getGamesPlayed() > 0) {
+                System.out.println("[Player Data loaded successfully]\n" +
+                        "[PLAYER]:\n" +
+                        "-------------------------\n" +
+                        "Name:  |" + player.getName() + "|\n" +
+                        "Wins:  |" + player.getWins() + "|\n" +
+                        "Win %: |" + player.winPercentage() + "|\n" +
+                        "-------------------------");
+            }else{
+                System.out.println("[NO PLAYER STATS DETECTED]");
+            }
+            return player;
         }catch (IOException | ClassNotFoundException e){
-            System.out.println("Error loading game state: " + e.getMessage());
+            System.out.println("[No player data detected]\n[" + e.getMessage()+"]");
+
         }
-        return player;
+        return null;
+
     }
 
     public static boolean isValidFileName(String s){

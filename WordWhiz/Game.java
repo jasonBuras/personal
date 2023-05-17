@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 
@@ -10,8 +9,9 @@ public class Game implements Serializable {
     private String prompt;
     private int remainingAttempts;
     private WordBank wordBank;
-    private String playerLastGuess;
-    private ArrayList<String> notThese;
+    private static String playerLastGuess;
+    private static StringBuilder containsThese = new StringBuilder();
+    private static ArrayList<String> notThese = new ArrayList<>();
     private static boolean tutorial;
     public Game(){
         wordBank = new WordBank();
@@ -19,7 +19,6 @@ public class Game implements Serializable {
         prompt = generatePrompt();
         remainingAttempts = 5;
         playerLastGuess = "";
-        notThese = new ArrayList<>();
     }
 
     /**
@@ -38,7 +37,6 @@ public class Game implements Serializable {
     public void updatePrompt(String guess){
         boolean triggered=false;
         boolean displayWrongLetters = false;
-        StringBuilder containsThese = new StringBuilder();
         StringBuilder butNotThese = new StringBuilder();
         StringBuilder sb = new StringBuilder(prompt);
         for (int i = 0; i < currentWord.length(); i++) {
@@ -62,8 +60,9 @@ public class Game implements Serializable {
             }
         }//end for loop
         if(displayWrongLetters){
-            notThese.add(sortFormat(butNotThese.toString()));
-            System.out.println("This word does not contain: " + sortFormat(notThese.toString()));
+            notThese.add(butNotThese.toString());
+            notThese.removeIf(String::isEmpty);
+            displayWrongLetters();
         }
 
         if(triggered){
@@ -76,13 +75,35 @@ public class Game implements Serializable {
         prompt = sb.toString();
     }
 
-    private String sortFormat(String butNotThese) {
+    public void displayWrongLetters(){
+        System.out.println("This word does not contain: " + sortFormat(notThese));
+    }
+
+    private String sortFormat(List<String> notThese) {
+        List<String> filteredList = new ArrayList<>();
+
+        for(String letter : notThese){
+            if(!letter.isEmpty()){
+                filteredList.add(letter);
+            }
+        }
         StringBuilder result= new StringBuilder();
-        char[] wrong = butNotThese.toCharArray();
-        Arrays.sort(wrong);
-        for(char ch : wrong){
+        List<Character> wrongLetters = new ArrayList<>();
+        for(String entry : filteredList){
+            char[] letters = entry.toCharArray();
+            for(char letter : letters){
+                if(!wrongLetters.contains(letter)){
+                    wrongLetters.add(letter);
+                }
+            }
+        }
+
+        Collections.sort(wrongLetters);
+
+        for(char ch: wrongLetters){
             result.append("{").append(ch).append("}");
         }
+
         return result.toString();
     }
 
@@ -131,6 +152,7 @@ public class Game implements Serializable {
         prompt = generatePrompt();
         remainingAttempts = 5;
         playerLastGuess = "";
+        containsThese = null;
         notThese = new ArrayList<>();
         tutorial=true;
     }
@@ -146,36 +168,61 @@ public class Game implements Serializable {
     public ArrayList<String> getNotThese() {
         return notThese;
     }
+
+    public StringBuilder getContainsThese() {
+        return containsThese;
+    }
+
+    public boolean isValidAnswer(String guess){
+        if(!wordBank.isValidWord(guess) || guess.length() != 5){
+            System.out.println("[INVALID RESPONSE]");
+            return false;
+        }
+        return true;
+    }
+
     private class WordBank{
-        private LinkedList<String> words;
+        private LinkedList<String> possibleAnswers;
+        private List<String> allowedWords;
         private Random random;
 
         public WordBank(){
-            words = new LinkedList<>();
+            possibleAnswers = new LinkedList<>();
+            allowedWords = new ArrayList<>();
+            loadWords();
         }
 
         public String getWord(){
-            if(words.isEmpty()){
+            if(possibleAnswers.isEmpty()){
                 loadWords();
             }
             random = new Random();
-            int index = random.nextInt(words.size());
-            return words.remove(index);
+            int index = random.nextInt(possibleAnswers.size());
+            return possibleAnswers.remove(index);
+        }
+
+        public boolean isValidWord(String word){
+            return allowedWords.contains(word);
         }
 
         private void loadWords(){
             try{
                 System.out.println("[Importing word database]");
                 File importedWordList = new File("wordlist.txt");
-                /*
-                TODO: UPDATE wordlist.txt to exclude words with repeated letters
-                 */
+                File allowedWordList = new File("allowed.txt");
                 Scanner reader = new Scanner(importedWordList);
                 while(reader.hasNextLine()){
                     String word = reader.nextLine().toLowerCase().trim();
-                    words.add(word);
+                    possibleAnswers.add(word);
+                    allowedWords.add(word);
                 }
                 reader.close();
+                Scanner reader2 = new Scanner( allowedWordList);
+                while (reader2.hasNextLine()){
+                    String validWord = reader2.nextLine().toLowerCase().trim();
+                    allowedWords.add(validWord);
+                }
+                reader2.close();
                 System.out.println("[Import Successful]");
             }
             catch(FileNotFoundException e) {

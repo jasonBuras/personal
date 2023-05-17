@@ -1,6 +1,10 @@
 import java.io.Serializable;
 
 public class Player implements Serializable {
+    /*
+    TODO: Consider adding additional stats.
+    correct letter %
+     */
     private String name;
     private int wins;
     private int gamesPlayed;
@@ -44,6 +48,14 @@ public class Player implements Serializable {
         double winPercentage = (double) this.wins/this.gamesPlayed * 100;
         result = winPercentage + "%";
         return result;
+    }
+
+    public void setWins(int wins) {
+        this.wins = wins;
+    }
+
+    public void setGamesPlayed(int gamesPlayed){
+        this.gamesPlayed = gamesPlayed;
     }
 
     public String playerInfo(){
