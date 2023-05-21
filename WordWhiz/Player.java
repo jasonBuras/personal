@@ -64,4 +64,13 @@ public class Player implements Serializable {
                 "[" + this.gamesPlayed + "] GAMES PLAYED\n" +
                 "[" + this.winPercentage() + "] WIN %\n";
     }
+
+    public String getData() {
+               return  "-------------------------\n" +
+                "Name:  |" + this.getName() + "|\n" +
+                "Wins:  |" + this.getWins() + "|\n" +
+                "Games: |" + this.getGamesPlayed() + "|\n" +
+                "Win %: |" + this.winPercentage() + "|\n" +
+                "-------------------------";
+    }
 }

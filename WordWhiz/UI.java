@@ -5,6 +5,7 @@ public class UI {
     private Scanner input;
     private Player player;
     private Game game;
+    private String[] previousGuesses;
 
 
     public UI(){
@@ -20,7 +21,6 @@ public class UI {
             resetPlayer(true);
             loadPlayer();//if player has played before, load playerdata; else player remains null, so a new player is created below
         }
-        delay(2);
         do{
             if(player.getName()==null){
                 newPlayer();
@@ -38,7 +38,7 @@ public class UI {
         System.out.println("[MAIN MENU]");
         int selection;
         do{
-            System.out.println("1 - Start\n2 - View Player Info\n3 - Clear Player Data");
+            System.out.println("1 - Start\n2 - View Player Info\n3 - Clear Player Data\n4 - Exit");
             selection = input.nextInt();
             input.nextLine();
             System.out.println();
@@ -62,6 +62,8 @@ public class UI {
                         break;
                     }
                 }while (true);
+            } else if (selection==4) {
+                exit(player.getGamesPlayed()==0);
             }
         }while (true);
 
@@ -69,84 +71,63 @@ public class UI {
     }
 
     private void play() {
-        int impatient=0;
+        int counter=0;
         String guess="";
-        String answer = game.getCurrentWord();
+        String answer = game.getCurrentAnswer();
         System.out.println("If you get stuck at any point, type \"help\" to get a better understanding of the game.");
+        previousGuesses = new String[5];
         do{
-            System.out.println("----------");
-            gameInfo();
+
             if(game.outOfAttempts()){
                 System.out.println("[Game Over]");
-                game.lose();
+                System.out.println("The word was: " + game.getCurrentAnswer());
                 player.lose();
-                gameOver();
                 delay(2);
-                break;
+                gameOver();
+                return;
             }
 
             do {
+                gameInfo();
+                guess = input.nextLine().toLowerCase();//user guesses
 
-                System.out.println(game.getPrompt());
-                System.out.println("Guess a word (5 letters) or type \"help\" for help:");
-                guess = input.nextLine().toLowerCase();
-                if(!game.isValidAnswer(guess)){
-                    System.out.println("Try Again");
+                if(guess.equals("get")){
+                    System.out.println(game.getCurrentAnswer());
                     delay(1);
+                    guess = "loser";
+                    game.setPlayerLastGuess(guess);
                 }
+
+                if(guess.equals("help")){
+                    System.out.println();
+                    System.out.println("[PREVIOUS GUESSES]");
+                    game.help();
+                    pressEnter();
+                    gameInfo();
+                    guess = input.nextLine().toLowerCase();//user guesses
+                }
+
+                if(guess.startsWith("set_")){
+                    game.setCurrentAnswer(guess);
+                }
+
             }while (!game.isValidAnswer(guess));
-
-            if(guess.equals("cheats")){
-                System.out.println(game.getCurrentWord());
-                guess = "loser";
-                game.setPlayerLastGuess(guess);
-            }
-
+            previousGuesses[counter] = guess;
+            counter++;
             System.out.println("\nYou guessed " + guess);
 
             if(guess.equals(answer)){
-                game.correctGuess();
                 player.win();
-                gameOver();
                 delay(2);
+                gameOver();
                 break;
             }
-            else if(guess.equals("help")){
-                System.out.println("\n....................");
-                game.displayWrongLetters();
-                System.out.println("[PROMPT]:\n" + game.getPrompt() + "\n----------");
-                System.out.println("[CONTAINS THESE LETTERS]:\n" + game.getContainsThese() + "\n----------");
-                System.out.println("The letters at the top are letters you entered but do not appear in the answer\n" +
-                        "\tIf a letter appears in the prompt, then you entered it in the correct location\n" +
-                        "\tThe letters under \"CONTAINS THESE LETTERS\" are letters that appear in the word, but you may have in the wrong place.\n" +
-                        "\t*- indicates that letter is in the word, but you entered it in the wrong spot");
-                System.out.println("\n....................");
-                pressEnter();
-            }
-            else if (guess.length() != 5 && !guess.equals("help")){
-                System.out.println("Please enter a word that is 5 letters long.");
-                delay(2);
-                impatient++;
-            }
-            else{
-                game.wrongGuess(guess);
+            else {
+                game.check(guess);
                 game.setPlayerLastGuess(guess);
                 if(!game.outOfAttempts()){
                     delay(2);
                 }
-            }
-
-            if(impatient == 2){
-                System.out.println("FIVE (5) LETTERS");
-                delay(1);
-            } else if (impatient==3) {
-                System.out.println("LAST CHANCE BUDDY");
-                delay(2);
-            } else if (impatient > 3) {
-                System.out.println("You don't deserve to use this program and now I'm just gonna waste your time");
-                delay(impatient);
-                System.out.println("If you actually need help, I'm sorry. Try reading the readme or typing help.");
-                exit();
             }
             System.out.println("----------");
         }while (true);
@@ -178,11 +159,12 @@ public class UI {
     }
 
     private void gameOver() {
+        game = new Game();
         GameSaveManager.savePlayer(player);
     }
 
     private void gameInfo() {
-        System.out.println("Guesses Remaining: " + game.getRemainingAttempts());
+        game.displayGameBoard();
     }
 
     private void loadPlayer() {
@@ -206,7 +188,21 @@ public class UI {
         }
     }
 
-    private void exit(){
+    private void exit(boolean noob){//if 0 games played, they're a noob
+
+        if(!noob){
+            do{
+                System.out.println("Would you like to save before exiting?");
+                String answer = input.nextLine();
+                if (answer.equals("yes")){
+                    GameSaveManager.savePlayer(player);
+                    break;
+                } else if (answer.equals("no")) {
+                    break;
+                }
+            }while (true);
+        }
+
         System.out.println("[EXITING]");
         System.out.println("Thank you for playing!");
         delay(1);

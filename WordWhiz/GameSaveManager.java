@@ -24,17 +24,11 @@ public class GameSaveManager {
             if(player.getGamesPlayed() > 0) {
                 System.out.println("[Player Data loaded successfully]\n" +
                         "[PLAYER]:\n" +
-                        "-------------------------\n" +
-                        "Name:  |" + player.getName() + "|\n" +
-                        "Wins:  |" + player.getWins() + "|\n" +
-                        "Win %: |" + player.winPercentage() + "|\n" +
-                        "-------------------------");
-            }else{
-                System.out.println("[NO PLAYER STATS DETECTED]");
+                        player.getData());
             }
             return player;
         }catch (IOException | ClassNotFoundException e){
-            System.out.println("[No player data detected]\n[" + e.getMessage()+"]");
+            System.out.println("[No player data detected]");
 
         }
         return null;
